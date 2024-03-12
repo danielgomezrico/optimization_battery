@@ -84,8 +84,10 @@ public class DisableBatteryOptimizationPlugin implements FlutterPlugin, Activity
                     if (arguments != null) {
                         autoStartTitle = String.valueOf(arguments.get(0));
                         autoStartMessage = String.valueOf(arguments.get(1));
-                        showAutoStartEnabler(null, null);
-                        result.success(true);
+                        showAutoStartEnabler(
+                                () -> result.success(true),
+                                () -> result.success(false)
+                        );
                     } else {
                         Log.e(TAG, "Unable to request enableAutoStart. Arguments are null");
                         result.success(false);
@@ -196,12 +198,26 @@ public class DisableBatteryOptimizationPlugin implements FlutterPlugin, Activity
                 KillerManager.Actions.ACTION_AUTOSTART,
                 autoStartTitle,
                 autoStartMessage,
-                (positiveCallback == null) ? () -> setManAutoStart(true) : positiveCallback,
-                (negativeCallback == null) ? () -> setManAutoStart(false) : negativeCallback
+                () -> {
+                    setManAutoStart(true);
+
+                    if (positiveCallback != null) {
+                        positiveCallback.onBatteryOptimizationAccepted();
+                    }
+                },
+                () -> {
+                    setManAutoStart(false);
+
+                    if (negativeCallback != null) {
+                        negativeCallback.onBatteryOptimizationCanceled();
+                    }
+                }
         );
     }
 
-    private void showManBatteryOptimizationDisabler(boolean isRequestNativeBatteryOptimizationDisabler) {
+    private void showManBatteryOptimizationDisabler(boolean isRequestNativeBatteryOptimizationDisabler,
+                                                    final BatteryOptimizationUtil.OnBatteryOptimizationAccepted positiveCallback,
+                                                    final BatteryOptimizationUtil.OnBatteryOptimizationCanceled negativeCallback) {
         BatteryOptimizationUtil.showBatteryOptimizationDialog(
                 mContext,
                 KillerManager.Actions.ACTION_POWERSAVING,
